@@ -152,3 +152,19 @@ intenta detectar automáticamente que dos árboles separados describen a la mism
   descendientes conectados (cuántos votos, quórum, desempates).
 - Soporte para relación "pareja" sin hijos en común.
 - Publicación de la app en iOS.
+
+## 10. Adenda — carga incremental del árbol (2026-09-21)
+
+El árbol crecerá con el tiempo a través de generaciones y fusiones de árboles vía
+invitación, por lo que la aplicación no debe cargar el grafo completo de una sola vez.
+Esto es un requisito no funcional de v1, no algo diferible a v2:
+
+- **API/consultas**: las consultas recursivas (CTEs) sobre `relationships` deben
+  acotarse por profundidad/ventana (p. ej. N generaciones arriba/abajo desde el nodo
+  enfocado), nunca traer el árbol completo en una sola llamada.
+- **UI**: la vista del árbol carga y renderiza solo la porción visible/cercana al nodo
+  actual, y solicita más datos (ancestros, descendientes, ramas colapsadas) a medida
+  que el usuario navega o expande un nodo.
+
+Esta restricción debe reflejarse en el plan de implementación tanto en el diseño de
+los endpoints/queries de Supabase como en los componentes de visualización del árbol.
