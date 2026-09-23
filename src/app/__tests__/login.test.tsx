@@ -25,6 +25,7 @@ describe('LoginScreen', () => {
     await waitFor(() => {
       expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
         email: 'hermana@example.com',
+        options: { emailRedirectTo: undefined },
       });
     });
     expect(getByTestId('sent-message')).toBeTruthy();

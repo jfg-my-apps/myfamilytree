@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, Button } from 'react-native';
+import { Platform, StyleSheet, TextInput, Button } from 'react-native';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { supabase } from '@/lib/supabase';
@@ -12,7 +12,11 @@ export default function LoginScreen() {
   async function handleSendMagicLink() {
     setStatus('sending');
     setErrorMessage('');
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    // On web, redirect back to whichever origin sent the request (localhost in dev,
+    // the Vercel domain in prod) instead of relying on Supabase's single "Site URL"
+    // default, which only matches one environment at a time.
+    const emailRedirectTo = Platform.OS === 'web' ? window.location.origin : undefined;
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo } });
     if (error) {
       setStatus('error');
       setErrorMessage(error.message);
