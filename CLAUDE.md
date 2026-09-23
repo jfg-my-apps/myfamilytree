@@ -55,6 +55,26 @@ Esto aplica en dos capas:
 Tenlo presente al diseñar el esquema de queries del backend y los componentes de
 visualización del árbol en el plan de implementación.
 
+## Pendientes antes de tener usuarios reales
+
+- **SMTP propio para Supabase Auth**: el servicio de correo integrado de Supabase
+  (plan free) tiene un límite muy bajo de envíos por hora (pensado solo para pruebas
+  ligeras) — nos topamos con "email rate limit exceeded" solo probando el flujo de
+  magic link manualmente. Antes de invitar usuarios reales hay que configurar un
+  proveedor SMTP propio (ej. Resend, tiene tier gratuito) en Authentication > Emails
+  del dashboard de Supabase.
+
+## Infraestructura desplegada (Fase 1)
+
+- Proyecto de Supabase: ver `.env` local para URL/anon key (no está commiteado).
+  Site URL y Redirect URLs en Authentication > URL Configuration ya apuntan a
+  producción + `http://localhost:8081`.
+- Producción (web): desplegado en Vercel desde el repo de GitHub
+  `jfg-my-apps/myfamilytree` (público — sin secretos en el código, `.env` está
+  gitignored). Auto-deploy en cada push a `main`.
+- `vercel.json` tiene `cleanUrls: true` — sin esto, rutas como `/login` dan 404
+  porque el export estático de Expo genera `login.html`, no `login/index.html`.
+
 ## Cómo mantener este archivo
 
 Este archivo es memoria viva del proyecto. Cuando en una sesión se tome una decisión
@@ -65,5 +85,11 @@ spec — solo lo que no es obvio ni está escrito en otro lado.
 
 ## Comandos
 
-Aún no hay código scaffolded. Se completará esta sección (dev, build, test, lint)
-cuando el proyecto Expo se inicialice.
+- `npm run web` — servidor de desarrollo (Expo, plataforma web).
+- `npm test` — corre la suite de Jest (`jest-expo` preset).
+- `npm run lint` — `expo lint` (ESLint, flat config en `eslint.config.js`).
+- `npm run format` — Prettier sobre todo el repo.
+- `npm run build:web` — export estático para producción (lo usa Vercel como Build
+  Command, con Output Directory `dist`).
+- Requiere `.env` local (copiar de `.env.example`) con
+  `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY` de tu proyecto Supabase.
