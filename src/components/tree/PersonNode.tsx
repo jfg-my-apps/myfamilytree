@@ -1,5 +1,4 @@
-import { Pressable } from 'react-native';
-import { Rect, Text as SvgText } from 'react-native-svg';
+import { G, Rect, Text as SvgText } from 'react-native-svg';
 import type { Person } from '@/lib/tree-data';
 
 const WIDTH = 180;
@@ -17,7 +16,7 @@ export function PersonNode({
   onPress: () => void;
 }) {
   return (
-    <Pressable testID={`person-node-${person.id}`} onPress={onPress}>
+    <G testID={`person-node-${person.id}`} onPress={onPress}>
       <Rect
         x={x - WIDTH / 2}
         y={y - HEIGHT / 2}
@@ -31,6 +30,6 @@ export function PersonNode({
       <SvgText x={x} y={y} textAnchor="middle" fontSize={14} fill="#16181c">
         {person.fullName}
       </SvgText>
-    </Pressable>
+    </G>
   );
 }

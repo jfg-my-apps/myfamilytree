@@ -1,5 +1,4 @@
-import { Pressable } from 'react-native';
-import { Rect, Text as SvgText } from 'react-native-svg';
+import { G, Rect, Text as SvgText } from 'react-native-svg';
 import type { PositionedSlot } from '@/lib/tree-slots';
 
 const WIDTH = 180;
@@ -15,7 +14,7 @@ export function EmptySlotBox({
   onPress: () => void;
 }) {
   return (
-    <Pressable testID={`empty-slot-${slot.personId}-${slot.role}`} onPress={onPress}>
+    <G testID={`empty-slot-${slot.personId}-${slot.role}`} onPress={onPress}>
       <Rect
         x={slot.x - WIDTH / 2}
         y={slot.y - HEIGHT / 2}
@@ -30,6 +29,6 @@ export function EmptySlotBox({
       <SvgText x={slot.x} y={slot.y} textAnchor="middle" fontSize={13} fill="#5b5f66">
         {label}
       </SvgText>
-    </Pressable>
+    </G>
   );
 }

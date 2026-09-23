@@ -1,4 +1,4 @@
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 import { computeTreeLayout } from '@/lib/tree-layout';
 import { computeEmptySlots, computeSlotPositions } from '@/lib/tree-slots';
@@ -42,8 +42,19 @@ export function TreeCanvas({
   const height = maxY - minY;
 
   return (
-    <ScrollView horizontal nestedScrollEnabled testID="tree-canvas-scroll-x">
-      <ScrollView nestedScrollEnabled testID="tree-canvas-scroll-y">
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      style={styles.outer}
+      contentContainerStyle={{ width }}
+      testID="tree-canvas-scroll-x"
+    >
+      <ScrollView
+        nestedScrollEnabled
+        style={{ width }}
+        contentContainerStyle={{ height }}
+        testID="tree-canvas-scroll-y"
+      >
         <Svg width={width} height={height} viewBox={`${minX} ${minY} ${width} ${height}`}>
           {neighborhood.edges.map((edge) => {
             const parent = positionByPersonId.get(edge.parentId);
@@ -87,3 +98,7 @@ export function TreeCanvas({
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  outer: { flex: 1 },
+});
