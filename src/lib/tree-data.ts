@@ -115,6 +115,79 @@ export async function fetchNeighborhood(personId: string): Promise<Neighborhood>
   return { people: (people ?? []).map(mapPersonRow), edges };
 }
 
+export type RelationshipType = 'biological' | 'adoptive';
+
+export async function createPersonWithRelationship(params: {
+  treeId: string;
+  fullName: string;
+  isLiving: boolean;
+  birthDate?: string;
+  relationship: { role: 'parent' | 'child'; otherPersonId: string; type: RelationshipType };
+  createdBy: string;
+}): Promise<Person> {
+  const { data: person, error: personError } = await supabase
+    .from('people')
+    .insert({
+      tree_id: params.treeId,
+      full_name: params.fullName,
+      is_living: params.isLiving,
+      birth_date: params.birthDate ?? null,
+      created_by: params.createdBy,
+    })
+    .select('id, full_name, is_living, birth_date, death_date')
+    .single();
+  if (personError) throw personError;
+
+  const parentId =
+    params.relationship.role === 'parent' ? person.id : params.relationship.otherPersonId;
+  const childId =
+    params.relationship.role === 'parent' ? params.relationship.otherPersonId : person.id;
+
+  const { error: relError } = await supabase.from('relationships').insert({
+    tree_id: params.treeId,
+    parent_id: parentId,
+    child_id: childId,
+    type: params.relationship.type,
+  });
+  if (relError) throw relError;
+
+  return mapPersonRow(person);
+}
+
+export async function createSibling(params: {
+  treeId: string;
+  fullName: string;
+  isLiving: boolean;
+  birthDate?: string;
+  parentIds: string[];
+  type: RelationshipType;
+  createdBy: string;
+}): Promise<Person> {
+  const { data: person, error: personError } = await supabase
+    .from('people')
+    .insert({
+      tree_id: params.treeId,
+      full_name: params.fullName,
+      is_living: params.isLiving,
+      birth_date: params.birthDate ?? null,
+      created_by: params.createdBy,
+    })
+    .select('id, full_name, is_living, birth_date, death_date')
+    .single();
+  if (personError) throw personError;
+
+  const rows = params.parentIds.map((parentId) => ({
+    tree_id: params.treeId,
+    parent_id: parentId,
+    child_id: person.id,
+    type: params.type,
+  }));
+  const { error: relError } = await supabase.from('relationships').insert(rows);
+  if (relError) throw relError;
+
+  return mapPersonRow(person);
+}
+
 export function mergeNeighborhoods(a: Neighborhood, b: Neighborhood): Neighborhood {
   const peopleById = new Map(a.people.map((p) => [p.id, p]));
   for (const person of b.people) peopleById.set(person.id, person);
