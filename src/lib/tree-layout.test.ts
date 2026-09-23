@@ -1,4 +1,4 @@
-import { computeTreeLayout } from './tree-layout';
+import { computeTreeLayout, resolveRowCollisions } from './tree-layout';
 import { RelationshipEdge } from './family-graph';
 
 describe('computeTreeLayout', () => {
@@ -59,5 +59,76 @@ describe('computeTreeLayout', () => {
     const byId = Object.fromEntries(positions.map((p) => [p.personId, p]));
 
     expect(Math.sign(byId.Zack.x - byId.Ana.x)).toBe(Math.sign(byId.me.x - byId.aunt.x));
+  });
+
+  it('spreads two co-parents apart instead of stacking them at the same x', () => {
+    // "dad" and "mom" are both parents of "me" and "sister" — every child
+    // they have in common is identical, so a naive "average of my
+    // children's x" computation gives both parents the exact same column.
+    const edges: RelationshipEdge[] = [
+      { parentId: 'dad', childId: 'me' },
+      { parentId: 'mom', childId: 'me' },
+      { parentId: 'dad', childId: 'sister' },
+      { parentId: 'mom', childId: 'sister' },
+    ];
+    const positions = computeTreeLayout(['me', 'sister', 'dad', 'mom'], edges, 'me');
+    const byId = Object.fromEntries(positions.map((p) => [p.personId, p]));
+
+    expect(byId.dad.x).not.toBe(byId.mom.x);
+  });
+
+  it('never places two different people at the same (x, y) at any scale', () => {
+    // A denser regression guard: three generations, a couple with two
+    // children each of whom also has a child of their own. Nothing here
+    // should ever coincide on screen.
+    const edges: RelationshipEdge[] = [
+      { parentId: 'dad', childId: 'me' },
+      { parentId: 'mom', childId: 'me' },
+      { parentId: 'dad', childId: 'sister' },
+      { parentId: 'mom', childId: 'sister' },
+      { parentId: 'me', childId: 'kid1' },
+      { parentId: 'sister', childId: 'kid2' },
+    ];
+    const personIds = ['me', 'sister', 'dad', 'mom', 'kid1', 'kid2'];
+    const positions = computeTreeLayout(personIds, edges, 'me');
+
+    const seen = new Set<string>();
+    for (const p of positions) {
+      const key = `${p.x}:${p.y}`;
+      expect(seen.has(key)).toBe(false);
+      seen.add(key);
+    }
+  });
+});
+
+describe('resolveRowCollisions', () => {
+  it('leaves items alone when nothing collides', () => {
+    const items = [
+      { id: 'a', generation: 0, x: -220 },
+      { id: 'b', generation: 0, x: 220 },
+    ];
+    const resolved = resolveRowCollisions(items, (item) => item.id);
+    expect(resolved.map((i) => i.x).sort()).toEqual([-220, 220]);
+  });
+
+  it('spreads items that landed on the exact same x within a generation', () => {
+    const items = [
+      { id: 'a', generation: 0, x: 0 },
+      { id: 'b', generation: 0, x: 0 },
+    ];
+    const resolved = resolveRowCollisions(items, (item) => item.id);
+    const xById = Object.fromEntries(resolved.map((i) => [i.id, i.x]));
+    expect(xById.a).not.toBe(xById.b);
+  });
+
+  it('does not move items from different generations even if their x matches', () => {
+    const items = [
+      { id: 'a', generation: 0, x: 0 },
+      { id: 'b', generation: 1, x: 0 },
+    ];
+    const resolved = resolveRowCollisions(items, (item) => item.id);
+    const xById = Object.fromEntries(resolved.map((i) => [i.id, i.x]));
+    expect(xById.a).toBe(0);
+    expect(xById.b).toBe(0);
   });
 });

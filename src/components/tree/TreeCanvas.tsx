@@ -1,9 +1,9 @@
 import { ScrollView, StyleSheet } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
-import { computeTreeLayout } from '@/lib/tree-layout';
+import { computeTreeLayout, resolveRowCollisions, GENERATION_SPACING_Y } from '@/lib/tree-layout';
 import { computeEmptySlots, computeSlotPositions } from '@/lib/tree-slots';
 import type { Neighborhood } from '@/lib/tree-data';
-import type { EmptySlot } from '@/lib/tree-slots';
+import type { EmptySlot, PositionedSlot } from '@/lib/tree-slots';
 import { PersonNode } from './PersonNode';
 import { EmptySlotBox } from './EmptySlotBox';
 
@@ -14,6 +14,10 @@ const SLOT_LABELS: Record<EmptySlot['role'], string> = {
   child: '+ Agregar hijo/a',
   sibling: '+ Agregar hermano/a',
 };
+
+type RowItem =
+  | { kind: 'person'; key: string; personId: string; x: number; y: number; generation: number }
+  | { kind: 'slot'; key: string; slot: PositionedSlot; x: number; y: number; generation: number };
 
 export function TreeCanvas({
   neighborhood,
@@ -27,13 +31,47 @@ export function TreeCanvas({
   onSlotPress: (slot: EmptySlot) => void;
 }) {
   const personIds = neighborhood.people.map((p) => p.id);
-  const positions = computeTreeLayout(personIds, neighborhood.edges, focusPersonId);
-  const positionByPersonId = new Map(positions.map((p) => [p.personId, p]));
-  const slots = computeEmptySlots(personIds, neighborhood.edges);
-  const positionedSlots = computeSlotPositions(slots, positions);
+  const rawPositions = computeTreeLayout(personIds, neighborhood.edges, focusPersonId);
+  const rawSlots = computeSlotPositions(
+    computeEmptySlots(personIds, neighborhood.edges),
+    rawPositions
+  );
 
-  const xs = [...positions.map((p) => p.x), ...positionedSlots.map((s) => s.x)];
-  const ys = [...positions.map((p) => p.y), ...positionedSlots.map((s) => s.y)];
+  // Slots are placed relative to their own anchor independently of anything
+  // else already at that spot, so a final pass spreads apart anything (a
+  // person, a slot, or both) that landed on the exact same (generation, x).
+  const combined: RowItem[] = [
+    ...rawPositions.map((p) => ({
+      kind: 'person' as const,
+      key: `person:${p.personId}`,
+      personId: p.personId,
+      x: p.x,
+      y: p.y,
+      generation: p.generation,
+    })),
+    ...rawSlots.map((s) => ({
+      kind: 'slot' as const,
+      key: `slot:${s.personId}:${s.role}`,
+      slot: s,
+      x: s.x,
+      y: s.y,
+      generation: Math.round(s.y / GENERATION_SPACING_Y),
+    })),
+  ];
+  const resolved = resolveRowCollisions(combined, (item) => item.key);
+
+  const positionByPersonId = new Map<string, { x: number; y: number }>();
+  const positionedSlots: PositionedSlot[] = [];
+  for (const item of resolved) {
+    if (item.kind === 'person') {
+      positionByPersonId.set(item.personId, { x: item.x, y: item.y });
+    } else {
+      positionedSlots.push({ ...item.slot, x: item.x, y: item.y });
+    }
+  }
+
+  const xs = resolved.map((item) => item.x);
+  const ys = resolved.map((item) => item.y);
   const minX = Math.min(0, ...xs) - CANVAS_PADDING;
   const maxX = Math.max(0, ...xs) + CANVAS_PADDING;
   const minY = Math.min(0, ...ys) - CANVAS_PADDING;
