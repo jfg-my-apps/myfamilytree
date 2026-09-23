@@ -51,7 +51,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "format": "prettier --write .",
-    "test": "jest"
+    "test": "jest",
+    "build:web": "expo export --platform web"
   },
   "private": true,
   "jest": {
