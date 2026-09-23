@@ -39,4 +39,25 @@ describe('computeTreeLayout', () => {
     expect(byId.B.x).toBeLessThan(byId.C.x);
     expect(byId.B.x).toBe(0);
   });
+
+  it('clusters a child near their own parent instead of pure alphabetical order', () => {
+    // "me" and "aunt" are siblings (share "grandma"); "me" has child "Zack",
+    // "aunt" has child "Ana". Whichever side "me" vs "aunt" land on, their
+    // own children must land on the same side as them, not be scattered by
+    // plain alphabetical order across the row below.
+    const edges: RelationshipEdge[] = [
+      { parentId: 'grandma', childId: 'me' },
+      { parentId: 'grandma', childId: 'aunt' },
+      { parentId: 'me', childId: 'Zack' },
+      { parentId: 'aunt', childId: 'Ana' },
+    ];
+    const positions = computeTreeLayout(
+      ['me', 'aunt', 'grandma', 'Zack', 'Ana'],
+      edges,
+      'me'
+    );
+    const byId = Object.fromEntries(positions.map((p) => [p.personId, p]));
+
+    expect(Math.sign(byId.Zack.x - byId.Ana.x)).toBe(Math.sign(byId.me.x - byId.aunt.x));
+  });
 });

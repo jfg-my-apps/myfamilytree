@@ -1,5 +1,6 @@
 import { G, Rect, Text as SvgText } from 'react-native-svg';
 import type { PositionedSlot } from '@/lib/tree-slots';
+import { svgPressProps } from './svgPress';
 
 const WIDTH = 180;
 const HEIGHT = 70;
@@ -14,7 +15,7 @@ export function EmptySlotBox({
   onPress: () => void;
 }) {
   return (
-    <G testID={`empty-slot-${slot.personId}-${slot.role}`} onPress={onPress}>
+    <G testID={`empty-slot-${slot.personId}-${slot.role}`} {...svgPressProps(onPress)}>
       <Rect
         x={slot.x - WIDTH / 2}
         y={slot.y - HEIGHT / 2}

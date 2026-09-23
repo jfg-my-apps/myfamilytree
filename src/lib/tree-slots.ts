@@ -32,30 +32,28 @@ export function computeSlotPositions(
   personPositions: PersonPosition[]
 ): PositionedSlot[] {
   const positionByPersonId = new Map(personPositions.map((p) => [p.personId, p]));
-  const countPerGenerationRow = new Map<number, number>();
-  for (const position of personPositions) {
-    countPerGenerationRow.set(
-      position.generation,
-      (countPerGenerationRow.get(position.generation) ?? 0) + 1
-    );
-  }
 
   return slots.map((slot) => {
     const anchor = positionByPersonId.get(slot.personId);
+    const anchorX = anchor?.x ?? 0;
     const anchorGeneration = anchor?.generation ?? 0;
-    const generation =
-      slot.role === 'parent'
-        ? anchorGeneration - 1
-        : slot.role === 'child'
-          ? anchorGeneration + 1
-          : anchorGeneration;
 
-    const indexInRow = countPerGenerationRow.get(generation) ?? 0;
-    countPerGenerationRow.set(generation, indexInRow + 1);
+    // A sibling slot shares its anchor's generation, so it must sit beside
+    // the anchor rather than on top of it. Parent/child slots move to a
+    // different generation row, so lining up under the anchor's own x
+    // can't collide with the anchor itself.
+    if (slot.role === 'sibling') {
+      return {
+        ...slot,
+        x: anchorX + NODE_SPACING_X,
+        y: anchorGeneration * GENERATION_SPACING_Y,
+      };
+    }
 
+    const generation = slot.role === 'parent' ? anchorGeneration - 1 : anchorGeneration + 1;
     return {
       ...slot,
-      x: indexInRow * NODE_SPACING_X,
+      x: anchorX,
       y: generation * GENERATION_SPACING_Y,
     };
   });

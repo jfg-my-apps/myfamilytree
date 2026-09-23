@@ -38,4 +38,35 @@ describe('computeSlotPositions', () => {
     const slots = computeSlotPositions([{ personId: 'me', role: 'child' }], positions);
     expect(slots[0].y).toBeGreaterThan(positions[0].y);
   });
+
+  it('aligns a parent slot with its own reference person, not with unrelated people in the same row', () => {
+    // Two people in the same generation (e.g. both parents of "me") each get
+    // their own parent slot — those must land above their own x, not be
+    // indistinguishable from each other.
+    const edges: RelationshipEdge[] = [
+      { parentId: 'dad', childId: 'me' },
+      { parentId: 'mom', childId: 'me' },
+    ];
+    const positions = computeTreeLayout(['me', 'dad', 'mom'], edges, 'me');
+    const byId = Object.fromEntries(positions.map((p) => [p.personId, p]));
+
+    const slots = computeSlotPositions(
+      [
+        { personId: 'dad', role: 'parent' },
+        { personId: 'mom', role: 'parent' },
+      ],
+      positions
+    );
+    const slotByPersonId = Object.fromEntries(slots.map((s) => [s.personId, s]));
+
+    expect(slotByPersonId.dad.x).toBe(byId.dad.x);
+    expect(slotByPersonId.mom.x).toBe(byId.mom.x);
+  });
+
+  it('offsets a sibling slot beside its reference person instead of on top of it', () => {
+    const positions = computeTreeLayout(['me'], [], 'me');
+    const slots = computeSlotPositions([{ personId: 'me', role: 'sibling' }], positions);
+    expect(slots[0].y).toBe(positions[0].y);
+    expect(slots[0].x).not.toBe(positions[0].x);
+  });
 });

@@ -1,5 +1,6 @@
 import { G, Rect, Text as SvgText } from 'react-native-svg';
 import type { Person } from '@/lib/tree-data';
+import { svgPressProps } from './svgPress';
 
 const WIDTH = 180;
 const HEIGHT = 70;
@@ -16,7 +17,7 @@ export function PersonNode({
   onPress: () => void;
 }) {
   return (
-    <G testID={`person-node-${person.id}`} onPress={onPress}>
+    <G testID={`person-node-${person.id}`} {...svgPressProps(onPress)}>
       <Rect
         x={x - WIDTH / 2}
         y={y - HEIGHT / 2}
