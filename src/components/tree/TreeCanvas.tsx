@@ -9,11 +9,15 @@ import { EmptySlotBox } from './EmptySlotBox';
 
 const CANVAS_PADDING = 400;
 
-const SLOT_LABELS: Record<EmptySlot['role'], string> = {
-  parent: '+ Agregar padre/madre',
-  child: '+ Agregar hijo/a',
-  sibling: '+ Agregar hermano/a',
+const SLOT_ROLE_LABEL: Record<EmptySlot['role'], string> = {
+  parent: '+ Agregar padre/madre de',
+  child: '+ Agregar hijo/a de',
+  sibling: '+ Agregar hermano/a de',
 };
+
+function firstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? fullName;
+}
 
 type RowItem =
   | { kind: 'person'; key: string; personId: string; x: number; y: number; generation: number }
@@ -31,6 +35,7 @@ export function TreeCanvas({
   onSlotPress: (slot: EmptySlot) => void;
 }) {
   const personIds = neighborhood.people.map((p) => p.id);
+  const personById = new Map(neighborhood.people.map((p) => [p.id, p]));
   const rawPositions = computeTreeLayout(personIds, neighborhood.edges, focusPersonId);
   const rawSlots = computeSlotPositions(
     computeEmptySlots(personIds, neighborhood.edges),
@@ -110,14 +115,36 @@ export function TreeCanvas({
               />
             );
           })}
-          {positionedSlots.map((slot) => (
-            <EmptySlotBox
-              key={`${slot.personId}-${slot.role}`}
-              slot={slot}
-              label={SLOT_LABELS[slot.role]}
-              onPress={() => onSlotPress({ personId: slot.personId, role: slot.role })}
-            />
-          ))}
+          {positionedSlots.map((slot) => {
+            const anchor = positionByPersonId.get(slot.personId);
+            return (
+              <Line
+                key={`slot-line-${slot.personId}-${slot.role}`}
+                testID={`slot-line-${slot.personId}-${slot.role}`}
+                x1={anchor?.x ?? slot.x}
+                y1={anchor?.y ?? slot.y}
+                x2={slot.x}
+                y2={slot.y}
+                stroke="#c2c6cc"
+                strokeWidth={1}
+                strokeDasharray="4,4"
+              />
+            );
+          })}
+          {positionedSlots.map((slot) => {
+            const owner = personById.get(slot.personId);
+            const label = owner
+              ? `${SLOT_ROLE_LABEL[slot.role]} ${firstName(owner.fullName)}`
+              : SLOT_ROLE_LABEL[slot.role];
+            return (
+              <EmptySlotBox
+                key={`${slot.personId}-${slot.role}`}
+                slot={slot}
+                label={label}
+                onPress={() => onSlotPress({ personId: slot.personId, role: slot.role })}
+              />
+            );
+          })}
           {neighborhood.people.map((person) => {
             const position = positionByPersonId.get(person.id);
             if (!position) return null;

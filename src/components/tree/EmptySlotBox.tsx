@@ -27,7 +27,14 @@ export function EmptySlotBox({
         strokeDasharray="6,4"
         strokeWidth={1.5}
       />
-      <SvgText x={slot.x} y={slot.y} textAnchor="middle" fontSize={13} fill="#5b5f66">
+      <SvgText
+        testID={`empty-slot-${slot.personId}-${slot.role}-label`}
+        x={slot.x}
+        y={slot.y}
+        textAnchor="middle"
+        fontSize={13}
+        fill="#5b5f66"
+      >
         {label}
       </SvgText>
     </G>

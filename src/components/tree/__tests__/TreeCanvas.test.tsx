@@ -44,4 +44,55 @@ describe('TreeCanvas', () => {
     await fireEvent.press(getByTestId('empty-slot-me-child'));
     expect(onSlotPress).toHaveBeenCalledWith({ personId: 'me', role: 'child' });
   });
+
+  it('labels each slot with the first name of the person it belongs to', async () => {
+    const neighborhood = {
+      people: [
+        { id: 'me', fullName: 'Juan Fernando', isLiving: true, birthDate: null, deathDate: null },
+        {
+          id: 'sister',
+          fullName: 'Lina Maria Gutierrez',
+          isLiving: true,
+          birthDate: null,
+          deathDate: null,
+        },
+      ],
+      edges: [{ parentId: 'mom', childId: 'me' }, { parentId: 'mom', childId: 'sister' }],
+    };
+
+    const { getByTestId } = await render(
+      <TreeCanvas
+        neighborhood={neighborhood}
+        focusPersonId="me"
+        onPersonPress={jest.fn()}
+        onSlotPress={jest.fn()}
+      />
+    );
+
+    expect(getByTestId('empty-slot-me-child-label').props.children.props.children).toBe(
+      '+ Agregar hijo/a de Juan'
+    );
+    expect(getByTestId('empty-slot-sister-child-label').props.children.props.children).toBe(
+      '+ Agregar hijo/a de Lina'
+    );
+  });
+
+  it('draws a dashed connector line from each slot to its owner', async () => {
+    const neighborhood = {
+      people: [{ id: 'me', fullName: 'Yo', isLiving: true, birthDate: null, deathDate: null }],
+      edges: [],
+    };
+
+    const { getByTestId } = await render(
+      <TreeCanvas
+        neighborhood={neighborhood}
+        focusPersonId="me"
+        onPersonPress={jest.fn()}
+        onSlotPress={jest.fn()}
+      />
+    );
+
+    expect(getByTestId('slot-line-me-parent')).toBeTruthy();
+    expect(getByTestId('slot-line-me-child')).toBeTruthy();
+  });
 });
