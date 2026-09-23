@@ -1,13 +1,16 @@
 describe('supabase client bootstrap', () => {
-  const ORIGINAL_ENV = process.env;
+  const ORIGINAL_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const ORIGINAL_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
   beforeEach(() => {
     jest.resetModules();
-    process.env = { ...ORIGINAL_ENV };
   });
 
-  afterAll(() => {
-    process.env = ORIGINAL_ENV;
+  afterEach(() => {
+    if (ORIGINAL_URL === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+    else process.env.EXPO_PUBLIC_SUPABASE_URL = ORIGINAL_URL;
+    if (ORIGINAL_ANON_KEY === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = ORIGINAL_ANON_KEY;
   });
 
   it('throws a clear error when env vars are missing', () => {
