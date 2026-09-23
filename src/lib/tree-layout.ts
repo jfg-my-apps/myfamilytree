@@ -34,7 +34,10 @@ export function computeTreeLayout(
   // children's columns. Because the counter only ever increases, no two
   // subtrees can ever claim the same horizontal range — unlike positioning
   // each generation's row independently, which let unrelated people (or
-  // rows of different sizes) land on the same x by coincidence.
+  // rows of different sizes) land on the same x by coincidence. Two
+  // co-parents who share every child still end up with the identical
+  // average column, though — resolveRowCollisions below spreads those (and
+  // any other near-collision) apart with a real minimum gap.
   const columnById = new Map<string, number>();
   const inProgress = new Set<string>();
   let nextColumn = 0;
@@ -70,28 +73,31 @@ export function computeTreeLayout(
     if (!columnById.has(personId)) columnById.set(personId, nextColumn++);
   }
 
-  spreadTiedColumns(personIds, generationById, columnById);
-
-  const positions = personIds.map((personId) => ({
+  const rawPositions = personIds.map((personId) => ({
     personId,
     x: columnById.get(personId)! * NODE_SPACING_X,
     y: (generationById.get(personId) ?? 0) * GENERATION_SPACING_Y,
     generation: generationById.get(personId) ?? 0,
   }));
 
+  const spaced = resolveRowCollisions(rawPositions, (p) => p.personId);
+
   // Recenter so the focus person always sits at x=0, keeping the view
   // anchored on load instead of drifting toward whichever side has more
   // ancestors/descendants.
-  const focusX = positions.find((p) => p.personId === focusPersonId)?.x ?? 0;
-  return positions.map((p) => ({ ...p, x: p.x - focusX }));
+  const focusX = spaced.find((p) => p.personId === focusPersonId)?.x ?? 0;
+  return spaced.map((p) => ({ ...p, x: p.x - focusX }));
 }
 
 /**
- * Final safety net: given any positioned items (real people, empty slots, or
- * both mixed together), nudges apart any that landed on the exact same
- * (generation, x) — which can happen because slots are placed relative to
- * their own anchor person independently of what else already occupies that
- * spot. Ties are spread symmetrically in a stable order.
+ * Final safety net, used both for real people alone (inside
+ * computeTreeLayout) and for people + empty slots combined (in TreeCanvas):
+ * enforces a real minimum horizontal gap between any two items in the same
+ * generation, rather than only catching items that landed on the *exact*
+ * same x. A column-averaging or anchor-relative placement can produce items
+ * that are merely close (not identical) and would still visually overlap —
+ * this sweeps each generation left-to-right and pushes anything crowding
+ * its predecessor out to a full NODE_SPACING_X gap.
  */
 export function resolveRowCollisions<T extends { generation: number; x: number }>(
   items: T[],
@@ -106,22 +112,13 @@ export function resolveRowCollisions<T extends { generation: number; x: number }
 
   const resolved: T[] = [];
   for (const rowItems of byGeneration.values()) {
-    const groups = new Map<number, T[]>();
-    for (const item of rowItems) {
-      const list = groups.get(item.x) ?? [];
-      list.push(item);
-      groups.set(item.x, list);
-    }
-    for (const [x, tied] of groups) {
-      if (tied.length === 1) {
-        resolved.push(tied[0]);
-        continue;
-      }
-      const sorted = [...tied].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));
-      const spread = (sorted.length - 1) / 2;
-      sorted.forEach((item, index) => {
-        resolved.push({ ...item, x: x + (index - spread) * NODE_SPACING_X });
-      });
+    const sorted = [...rowItems].sort((a, b) => a.x - b.x || keyOf(a).localeCompare(keyOf(b)));
+    let previousX: number | null = null;
+    for (const item of sorted) {
+      const x: number =
+        previousX === null ? item.x : Math.max(item.x, previousX + NODE_SPACING_X);
+      resolved.push({ ...item, x });
+      previousX = x;
     }
   }
   return resolved;
@@ -166,42 +163,4 @@ function computeGenerations(
     if (!generationById.has(personId)) generationById.set(personId, 0);
   }
   return generationById;
-}
-
-/**
- * Two co-parents who share every child compute the exact same average
- * column (and would otherwise be drawn stacked on top of each other).
- * Detects any such exact ties within a generation and spreads them evenly
- * around their shared value, in a stable (alphabetical) order.
- */
-function spreadTiedColumns(
-  personIds: string[],
-  generationById: Map<string, number>,
-  columnById: Map<string, number>
-): void {
-  const byGeneration = new Map<number, string[]>();
-  for (const personId of personIds) {
-    const generation = generationById.get(personId) ?? 0;
-    const list = byGeneration.get(generation) ?? [];
-    list.push(personId);
-    byGeneration.set(generation, list);
-  }
-
-  for (const ids of byGeneration.values()) {
-    const groupsByColumn = new Map<number, string[]>();
-    for (const personId of ids) {
-      const column = columnById.get(personId)!;
-      const list = groupsByColumn.get(column) ?? [];
-      list.push(personId);
-      groupsByColumn.set(column, list);
-    }
-    for (const [column, tiedIds] of groupsByColumn) {
-      if (tiedIds.length <= 1) continue;
-      const sorted = [...tiedIds].sort();
-      const spread = (sorted.length - 1) / 2;
-      sorted.forEach((personId, index) => {
-        columnById.set(personId, column + (index - spread) * 0.5);
-      });
-    }
-  }
 }

@@ -1,4 +1,4 @@
-import { computeTreeLayout, resolveRowCollisions } from './tree-layout';
+import { computeTreeLayout, resolveRowCollisions, NODE_SPACING_X } from './tree-layout';
 import { RelationshipEdge } from './family-graph';
 
 describe('computeTreeLayout', () => {
@@ -74,7 +74,10 @@ describe('computeTreeLayout', () => {
     const positions = computeTreeLayout(['me', 'sister', 'dad', 'mom'], edges, 'me');
     const byId = Object.fromEntries(positions.map((p) => [p.personId, p]));
 
-    expect(byId.dad.x).not.toBe(byId.mom.x);
+    // Not just "different" — far enough apart that 180px-wide boxes can't
+    // visually overlap (this exact case regressed once already: a 110px
+    // gap counted as "resolved" but the boxes still touched on screen).
+    expect(Math.abs(byId.dad.x - byId.mom.x)).toBeGreaterThanOrEqual(NODE_SPACING_X);
   });
 
   it('never places two different people at the same (x, y) at any scale', () => {
@@ -92,11 +95,17 @@ describe('computeTreeLayout', () => {
     const personIds = ['me', 'sister', 'dad', 'mom', 'kid1', 'kid2'];
     const positions = computeTreeLayout(personIds, edges, 'me');
 
-    const seen = new Set<string>();
+    const byGeneration = new Map<number, number[]>();
     for (const p of positions) {
-      const key = `${p.x}:${p.y}`;
-      expect(seen.has(key)).toBe(false);
-      seen.add(key);
+      const xs = byGeneration.get(p.generation) ?? [];
+      xs.push(p.x);
+      byGeneration.set(p.generation, xs);
+    }
+    for (const xs of byGeneration.values()) {
+      const sorted = [...xs].sort((a, b) => a - b);
+      for (let i = 1; i < sorted.length; i++) {
+        expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(NODE_SPACING_X);
+      }
     }
   });
 });
@@ -118,7 +127,20 @@ describe('resolveRowCollisions', () => {
     ];
     const resolved = resolveRowCollisions(items, (item) => item.id);
     const xById = Object.fromEntries(resolved.map((i) => [i.id, i.x]));
-    expect(xById.a).not.toBe(xById.b);
+    expect(Math.abs(xById.a - xById.b)).toBeGreaterThanOrEqual(NODE_SPACING_X);
+  });
+
+  it('spreads items that are merely close, not just exactly tied', () => {
+    // The bug that actually shipped: two items 110px apart (half the min
+    // gap) counted as "not colliding" under exact-equality checks, but
+    // still visually overlapped since nodes are ~180px wide.
+    const items = [
+      { id: 'a', generation: 0, x: 0 },
+      { id: 'b', generation: 0, x: NODE_SPACING_X / 2 },
+    ];
+    const resolved = resolveRowCollisions(items, (item) => item.id);
+    const xById = Object.fromEntries(resolved.map((i) => [i.id, i.x]));
+    expect(Math.abs(xById.a - xById.b)).toBeGreaterThanOrEqual(NODE_SPACING_X);
   });
 
   it('does not move items from different generations even if their x matches', () => {
