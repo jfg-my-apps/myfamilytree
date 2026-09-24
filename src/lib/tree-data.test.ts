@@ -3,6 +3,7 @@ import {
   createSibling,
   mergeNeighborhoods,
   Neighborhood,
+  updateMyName,
 } from './tree-data';
 import { supabase } from './supabase';
 
@@ -115,5 +116,29 @@ describe('createSibling', () => {
       { tree_id: 'tree-1', parent_id: 'mom', child_id: 'new-id', type: 'biological' },
       { tree_id: 'tree-1', parent_id: 'dad', child_id: 'new-id', type: 'biological' },
     ]);
+  });
+});
+
+describe('updateMyName', () => {
+  it('updates full_name for the given person id', async () => {
+    const eq = jest.fn().mockResolvedValue({ error: null });
+    const update = jest.fn().mockReturnValue({ eq });
+    (supabase.from as jest.Mock).mockImplementation((table: string) => {
+      if (table === 'people') return { update };
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    await updateMyName('me', 'Juan Fernando');
+
+    expect(update).toHaveBeenCalledWith({ full_name: 'Juan Fernando' });
+    expect(eq).toHaveBeenCalledWith('id', 'me');
+  });
+
+  it('throws when the update fails', async () => {
+    const eq = jest.fn().mockResolvedValue({ error: new Error('boom') });
+    const update = jest.fn().mockReturnValue({ eq });
+    (supabase.from as jest.Mock).mockImplementation(() => ({ update }));
+
+    await expect(updateMyName('me', 'Juan')).rejects.toThrow('boom');
   });
 });

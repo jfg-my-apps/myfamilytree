@@ -76,23 +76,4 @@ describe('TreeCanvas', () => {
       '+ Agregar hijo/a de Lina'
     );
   });
-
-  it('draws a dashed connector line from each slot to its owner', async () => {
-    const neighborhood = {
-      people: [{ id: 'me', fullName: 'Yo', isLiving: true, birthDate: null, deathDate: null }],
-      edges: [],
-    };
-
-    const { getByTestId } = await render(
-      <TreeCanvas
-        neighborhood={neighborhood}
-        focusPersonId="me"
-        onPersonPress={jest.fn()}
-        onSlotPress={jest.fn()}
-      />
-    );
-
-    expect(getByTestId('slot-line-me-parent')).toBeTruthy();
-    expect(getByTestId('slot-line-me-child')).toBeTruthy();
-  });
 });

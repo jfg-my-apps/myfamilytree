@@ -116,22 +116,6 @@ export function TreeCanvas({
             );
           })}
           {positionedSlots.map((slot) => {
-            const anchor = positionByPersonId.get(slot.personId);
-            return (
-              <Line
-                key={`slot-line-${slot.personId}-${slot.role}`}
-                testID={`slot-line-${slot.personId}-${slot.role}`}
-                x1={anchor?.x ?? slot.x}
-                y1={anchor?.y ?? slot.y}
-                x2={slot.x}
-                y2={slot.y}
-                stroke="#c2c6cc"
-                strokeWidth={1}
-                strokeDasharray="4,4"
-              />
-            );
-          })}
-          {positionedSlots.map((slot) => {
             const owner = personById.get(slot.personId);
             const label = owner
               ? `${SLOT_ROLE_LABEL[slot.role]} ${firstName(owner.fullName)}`

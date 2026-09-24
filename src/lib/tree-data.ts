@@ -188,6 +188,11 @@ export async function createSibling(params: {
   return mapPersonRow(person);
 }
 
+export async function updateMyName(personId: string, fullName: string): Promise<void> {
+  const { error } = await supabase.from('people').update({ full_name: fullName }).eq('id', personId);
+  if (error) throw error;
+}
+
 export function mergeNeighborhoods(a: Neighborhood, b: Neighborhood): Neighborhood {
   const peopleById = new Map(a.people.map((p) => [p.id, p]));
   for (const person of b.people) peopleById.set(person.id, person);
