@@ -84,11 +84,16 @@ visualización del árbol en el plan de implementación.
   (`0002_people_self_update.sql`) — solo cuando `auth.uid()` es tanto `created_by`
   como `claimed_by_user_id` de esa fila. Edición de nodos ajenos sigue sin UI (eso es
   `change_requests`, Fase 4).
-- **react-native-svg + onPress en web**: no uses `onPress` directo en componentes de
-  `react-native-svg` (Rect/G/etc.) — dispara su mixin de touch legado y
-  react-native-web tira warnings de responder en cada tap. Usa el helper
-  `svgPressProps()` en `src/components/tree/svgPress.ts` (pasa `onClick` en web,
-  `onPress` en nativo).
+- **react-native-svg + onPress en web**: usa `onPress` directo en componentes de
+  `react-native-svg` (Rect/G/etc.), aunque dispare warnings de consola en dev
+  ("Unknown event handler property onResponder...", inofensivos). Se intentó
+  evitarlos pasando `onClick` directo en vez de `onPress` (ver `prepare.ts` del
+  paquete: internamente mapea `onPress` → `onClick` para el DOM) — funcionaba en el
+  dev server local pero **rompía todos los taps en el build de producción de
+  Vercel sin ningún error en consola**, detectado solo probando producción a mano.
+  No se identificó la causa exacta de la diferencia dev/prod; revertido a `onPress`
+  simple, que es la API soportada. No repetir ese intento sin antes probar en un
+  build de producción real.
 
 ## Infraestructura desplegada (Fase 1)
 
