@@ -64,6 +64,32 @@ visualización del árbol en el plan de implementación.
   proveedor SMTP propio (ej. Resend, tiene tier gratuito) en Authentication > Emails
   del dashboard de Supabase.
 
+## Vista del árbol (Fase 2)
+
+- **Layout**: `src/lib/tree-layout.ts` asigna a cada persona una "columna" vía DFS
+  (las hojas reclaman la siguiente columna libre; un ancestro es el promedio de las
+  columnas de sus hijos) — así ningún subárbol puede invadir el rango horizontal de
+  otro. `resolveRowCollisions` es la red de seguridad final: barre cada fila de
+  izquierda a derecha imponiendo una separación mínima real (`NODE_SPACING_X`), no
+  solo detectando coincidencias exactas — una coincidencia "cercana pero no exacta"
+  ya causó overlaps visuales una vez. Se aplica dos veces: a las personas reales
+  dentro de `computeTreeLayout`, y de nuevo al conjunto combinado personas+slots en
+  `TreeCanvas`.
+- **Slots vacíos**: cada slot ("+ Agregar padre/madre de X") lleva el nombre de pila
+  de su dueño en el label — probamos líneas punteadas conectando slot→dueño y
+  resultaban más confusas que útiles con varios slots por fila, así que se
+  descartaron a favor del label solo.
+- **Edición del propio nombre**: cualquier usuario puede editar su propio
+  `full_name` (botón "Editar mi nombre" en la home) vía una excepción angosta de RLS
+  (`0002_people_self_update.sql`) — solo cuando `auth.uid()` es tanto `created_by`
+  como `claimed_by_user_id` de esa fila. Edición de nodos ajenos sigue sin UI (eso es
+  `change_requests`, Fase 4).
+- **react-native-svg + onPress en web**: no uses `onPress` directo en componentes de
+  `react-native-svg` (Rect/G/etc.) — dispara su mixin de touch legado y
+  react-native-web tira warnings de responder en cada tap. Usa el helper
+  `svgPressProps()` en `src/components/tree/svgPress.ts` (pasa `onClick` en web,
+  `onPress` en nativo).
+
 ## Infraestructura desplegada (Fase 1)
 
 - Proyecto de Supabase: ver `.env` local para URL/anon key (no está commiteado).
